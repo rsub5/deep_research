@@ -1,5 +1,7 @@
+print("START writer_agent.py")
 from pydantic import BaseModel, Field
 from agents import Agent
+print("AFTER import Agent")
 
 INSTRUCTIONS = (
     "You are a senior researcher tasked with writing a cohesive report for a research query. "
@@ -19,9 +21,11 @@ class ReportData(BaseModel):
     follow_up_questions: list[str] = Field(description="Suggested topics to research further")
 
 
+print("ABOUT TO CREATE writer_agent")
 writer_agent = Agent(
     name="WriterAgent",
     instructions=INSTRUCTIONS,
     model="gpt-4o-mini",
     output_type=ReportData,
 )
+print("CREATED writer_agent")

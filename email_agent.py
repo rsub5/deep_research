@@ -5,6 +5,9 @@ from sendgrid.helpers.mail import Email, Mail, Content, To
 from agents import Agent, function_tool
 import asyncio
 from writer_agent import ReportData
+import markdown2
+
+print("function_tool imported:", function_tool)
 
 def _send_email_impl(subject: str, html_body: str, recipient: str = None) -> Dict[str, str]:
     sg = sendgrid.SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
@@ -33,7 +36,7 @@ email_agent = Agent(
 
 async def send_email_with_markdown(markdown: str, recipient: str = None):
     subject = "Research Report"
-    html_body = markdown  # Optionally convert markdown to HTML
+    html_body = markdown2.markdown(markdown)  # Convert markdown to HTML using markdown2
     try:
         await asyncio.to_thread(_send_email_impl, subject, html_body, recipient)
         print("Email sent (async, markdown)")
