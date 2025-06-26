@@ -48,3 +48,7 @@ async def send_email_with_markdown(markdown: str, recipient: str = None):
 async def send_email_with_report(report: ReportData, recipient: str = None):
     markdown = report.markdown_report if hasattr(report, 'markdown_report') else str(report)
     return await send_email_with_markdown(markdown, recipient=recipient)
+
+def send_request_token_email(subject: str, html_body: str, recipient: str = None) -> dict:
+    """Send a custom email for token requests (sync)."""
+    return _send_email_impl(subject, html_body, recipient)

@@ -14,8 +14,137 @@ load_dotenv(override=True)
 # Global variable to store the latest report
 latest_report = ""
 
-# UI Text Constants
-UI_TITLE = "# Deep Research"
+# Enhanced UI Constants
+UI_TITLE = """
+# 🔬 Deep Research Assistant
+*Powered by AI-driven research and analysis*
+"""
+
+# Enhanced CSS for compact authentication
+CUSTOM_CSS = """
+<style>
+    .main-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+        color: white;
+    }
+    
+    .top-nav {
+        background: #f8f9fa;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .auth-compact {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .auth-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    .research-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 1.5rem;
+    }
+    
+    .output-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 10px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .status-indicator {
+        padding: 0.5rem 1rem;
+        border-radius: 5px;
+        font-weight: 500;
+        text-align: center;
+    }
+    
+    .status-awaiting { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    .status-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .status-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .status-processing { background: #cce5ff; color: #004085; border: 1px solid #b3d7ff; }
+    
+    .button-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .download-section {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .email-section {
+        background: #e3f2fd;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #bbdefb;
+    }
+    
+    .compact-input {
+        max-width: 200px;
+        font-size: 0.9rem;
+    }
+    
+    .compact-button {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        height: auto;
+    }
+    
+    .auth-toggle {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+    
+    .auth-toggle:hover {
+        background: #0056b3;
+    }
+</style>
+"""
+
+# Enhanced status messages
+STATUS_MESSAGES = {
+    "awaiting": "⏳ Awaiting authentication...",
+    "authenticated": "✅ Authenticated! Ready to research.",
+    "invalid_token": "❌ Invalid token. Please request a valid token.",
+    "searching": "🔍 Searching for research...",
+    "thinking": "🤔 Analyzing information...",
+    "writing": "✍️ Writing research document...",
+    "completed": "✅ Research completed successfully!",
+    "error": "❌ An error occurred. Please try again."
+}
 
 # Query UI Elements
 QUERY_LABELS = {
@@ -184,119 +313,5 @@ async def send_email_report(email):
         print(DEBUG_MESSAGES["exception"].format(error=e))
         return create_status_html(f"Error: {str(e).splitlines()[0]}", "error")
 
-with gr.Blocks(theme=gr.themes.Default(primary_hue="sky")) as ui:
-    gr.Markdown(UI_TITLE)
-    with gr.Row():
-        email_input = gr.Textbox(label="Email (for token verification)")
-        token_input = gr.Textbox(label="Access Token")
-        status_label = gr.Markdown(label="Status", value="Status: Awaiting input...")
-    with gr.Row():
-        request_token_button = gr.Button("Request Token", elem_id="request_token_btn")
-        validate_button = gr.Button("Validate Token")
-        refresh_button = gr.Button("Refresh")
-    query_textbox = gr.Textbox(label=QUERY_LABELS["input"])
-    run_button = gr.Button(BUTTON_LABELS["run"], variant="primary", interactive=False)
-    report = gr.Markdown(label=QUERY_LABELS["report"])
-    
-    # Arrange buttons in a single row
-    with gr.Row():
-        with gr.Column(scale=1):
-            download_pdf_button = gr.Button(BUTTON_LABELS["download_pdf"], variant="secondary")
-        with gr.Column(scale=1):
-            download_docx_button = gr.Button(BUTTON_LABELS["download_docx"], variant="secondary")
-        with gr.Column(scale=1):
-            send_email_button = gr.Button(BUTTON_LABELS["send_email"], variant="secondary")
-    
-    # Arrange outputs in a single row below
-    with gr.Row():
-        with gr.Column(scale=1):
-            download_pdf_file = gr.File(label=FILE_LABELS["pdf"])
-        with gr.Column(scale=1):
-            download_docx_file = gr.File(label=FILE_LABELS["docx"])
-        with gr.Column(scale=1):
-            email_status = gr.HTML(
-                value=create_status_html(EMAIL_MESSAGES["not_sent"]), 
-                label=EMAIL_LABELS["status"]
-            )
-    
-    # Markdown download button (optional, can be placed elsewhere)
-    download_button = gr.Button(BUTTON_LABELS["download_markdown"], variant="secondary")
-    download_file = gr.File(label=FILE_LABELS["markdown"])
-    
-    # --- Admin Mode Logic ---
-    def is_admin_mode(email):
-        return email.strip().startswith("RSUB_TOKEN:")
-
-    def update_request_button(email):
-        if is_admin_mode(email):
-            return gr.update(value="Generate Token")
-        else:
-            return gr.update(value="Request Token")
-
-    def request_or_generate_token_action(email, token=None):
-        if is_admin_mode(email):
-            # Admin mode: generate and save token
-            actual_email = email.replace("RSUB_TOKEN:", "").strip()
-            if not actual_email:
-                return gr.update(value="❌ Please provide a valid email after RSUB_TOKEN:"), gr.update()
-            if not token:
-                # Generate a new token if not provided
-                token = generate_token(16)
-            save_token(actual_email, token)
-            # Do NOT show the token or RSUB_TOKEN in the status label
-            return gr.update(value=f"✅ Token generated and saved for {actual_email}."), gr.update()
-        else:
-            # Normal user mode: request token
-            if not email:
-                return gr.update(value="❌ Please enter an email to request a token."), gr.update()
-            subject = f"Token Request for {email}"
-            html_body = f"A user has requested a token for email: <b>{email}</b><br>Proposed token: <b>RSUB_TOKEN:{email}</b>"
-            _send_email_impl(subject, html_body, recipient="admin@subirroy.in")
-            return gr.update(value=f"✅ Token request sent. Please wait for admin approval."), gr.update()
-
-    # --- UI Interactivity ---
-    def on_email_change(email):
-        return update_request_button(email)
-
-    # --- Existing event handlers ---
-    def validate_token_action(email, token):
-        if not validate_token(email, token):
-            return gr.update(value="❌ Invalid token for this email. Please request a valid token to run Deep Research."), gr.update(interactive=False), gr.update(interactive=True), gr.update(interactive=True)
-        return gr.update(value="✅ Token validated! You may now run Deep Research."), gr.update(interactive=True), gr.update(interactive=False), gr.update(interactive=False)
-
-    def refresh_action():
-        return (
-            gr.update(value="Status: Awaiting input..."),
-            gr.update(interactive=False),
-            gr.update(interactive=True),
-            gr.update(interactive=True),
-            gr.update(value="Request Token")
-        )
-
-    async def run_with_token(query, email, token, status=gr.State()):
-        if not validate_token(email, token):
-            yield gr.update(value="❌ Invalid token for this email. Please request a valid token to run Deep Research."), ""
-            return
-        yield gr.update(value="🔍 Searching for research..."), ""
-        async for chunk in run(query):
-            if chunk.strip().lower().startswith("thinking"):
-                yield gr.update(value="🤔 Thinking on research..."), chunk
-            elif chunk.strip().lower().startswith("writing"):
-                yield gr.update(value="✍️ Writing research document..."), chunk
-            else:
-                yield gr.update(value="✅ Document created successfully!"), chunk
-
-    # --- Connect events ---
-    email_input.change(fn=on_email_change, inputs=email_input, outputs=request_token_button)
-    request_token_button.click(fn=request_or_generate_token_action, inputs=[email_input, token_input], outputs=[status_label, request_token_button])
-    validate_button.click(fn=validate_token_action, inputs=[email_input, token_input], outputs=[status_label, run_button, email_input, token_input])
-    refresh_button.click(fn=refresh_action, inputs=None, outputs=[status_label, run_button, email_input, token_input, request_token_button])
-    run_button.click(fn=run_with_token, inputs=[query_textbox, email_input, token_input], outputs=[status_label, report])
-    query_textbox.submit(fn=run_with_token, inputs=[query_textbox, email_input, token_input], outputs=[status_label, report])
-    download_button.click(fn=download_report, outputs=download_file)
-    download_pdf_button.click(fn=download_report_as_pdf, outputs=download_pdf_file)
-    download_docx_button.click(fn=download_report_as_docx, outputs=download_docx_file)
-    send_email_button.click(fn=send_email_report, inputs=email_input, outputs=email_status)
-
-ui.launch(inbrowser=True)
+# To launch the UI, run deep_research_start.py
 
