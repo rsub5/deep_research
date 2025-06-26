@@ -19,6 +19,7 @@ from deep_research import (
     CHUNK_FILTER_KEYWORDS
 )
 from email_agent import send_request_token_email
+from token_manager import RESEARCH_RUN_COUNT_TOKEN
 
 # Use relative path with deep_research folder as main
 css_file_path = "./deep_research_style.css"
@@ -46,11 +47,13 @@ def launch_ui():
                 # Research Section (with comfortable gap)
                 with gr.Row():
                     with gr.Column(scale=1):
-                        with gr.Row():
-                            with gr.Column(scale=0, min_width=0):
+                        with gr.Row(elem_classes=["left-align-row"]):
+                            with gr.Column(scale=1):
                                 auth_icon_button = gr.Button("🔐", elem_id="auth-inline-btn", size="sm", variant="secondary")
-                        with gr.Row():
-                            research_heading = gr.Markdown("### 🔬 Research Query (click auth to Research)", elem_id="research-query-heading")
+                            with gr.Column(scale=8):
+                                validation_message = gr.HTML(visible=True, value="", elem_id="validation-message")
+                with gr.Row():
+                    research_heading = gr.Markdown("### 🔬 Research Query (click auth to Research)", elem_id="research-query-heading")
                 query_textbox = gr.Textbox(
                     label="What would you like to research?",
                     placeholder="Enter your research topic or question...",
@@ -64,6 +67,7 @@ def launch_ui():
                     interactive=False,
                     elem_classes=["research-button"]
                 )
+                gr.HTML(f'<div style="color:#d32f2f;font-size:0.78rem;margin-top:0.25rem;">Due to computation cost, research can be performed only {RESEARCH_RUN_COUNT_TOKEN} time(s). You need to raise further request to run Research again.</div>')
                 gr.HTML('</div>')
                 
                 # Report Display Section
@@ -77,68 +81,62 @@ def launch_ui():
                         )
                         gr.HTML('</div>')
                 
-                # Download and Export Section
+                # Downloading / Email Report Options (Responsive, DRY, Layout Only)
+                gr.Markdown("### 📥 Downloading / 📧 Email Report Options")
                 with gr.Row():
-                    with gr.Column(scale=1):
-                        gr.HTML('<div class="download-section">')
-                        gr.Markdown("### 📥 Download Options")
-                        with gr.Row():
-                            download_pdf_button = gr.Button(
-                                "📄 Download PDF",
-                                variant="secondary",
-                                size="sm",
-                                scale=1
-                            )
-                            download_docx_button = gr.Button(
-                                "📝 Download DOCX",
-                                variant="secondary",
-                                size="sm",
-                                scale=1
-                            )
-                            download_button = gr.Button(
-                                "📋 Download Markdown",
-                                variant="secondary",
-                                size="sm",
-                                scale=1
-                            )
-                        
-                        with gr.Row():
-                            download_pdf_file = gr.File(label="PDF Report")
-                            download_docx_file = gr.File(label="DOCX Report")
-                            download_file = gr.File(label="Markdown Report")
-                        gr.HTML('</div>')
-                
-                # Email Section
-                with gr.Row():
-                    with gr.Column(scale=1):
-                        gr.HTML('<div class="email-section">')
-                        gr.Markdown("### 📧 Email Report")
-                        with gr.Row():
-                            email_recipient = gr.Textbox(
-                                label="Recipient Email",
-                                placeholder="Enter recipient email address",
-                                scale=2
-                            )
-                            send_email_button = gr.Button(
-                                "📤 Send Email",
-                                variant="primary",
-                                size="sm",
-                                scale=1
-                            )
-                        
+                    # PDF Block
+                    with gr.Column():
+                        download_pdf_button = gr.Button(
+                            "📄 Download PDF",
+                            variant="secondary",
+                            size="sm"
+                        )
+                        download_pdf_file = gr.File(label="PDF Report")
+                    # DOCX Block
+                    with gr.Column():
+                        download_docx_button = gr.Button(
+                            "📝 Download DOCX",
+                            variant="secondary",
+                            size="sm"
+                        )
+                        download_docx_file = gr.File(label="DOCX Report")
+                    # Email Block
+                    with gr.Column():
+                        send_email_button = gr.Button(
+                            "📤 Send Email",
+                            variant="primary",
+                            size="sm"
+                        )
+                        email_recipient = gr.Textbox(
+                            label="",
+                            placeholder=""
+                        )
                         email_status = gr.HTML(
                             value=create_status_html(EMAIL_MESSAGES["not_sent"]),
                             label="Email Status"
                         )
-                        gr.HTML('</div>')
+                # (Commented out markdown button and file for future use)
+                # with gr.Column():
+                #     download_button = gr.Button(
+                #         "📋 Download Markdown",
+                #         variant="secondary",
+                #         size="sm"
+                #     )
+                #     download_file = gr.File(label="Markdown Report")
                 
                 gr.HTML('</div>')  # End main-content
         
         # Sidebar for Authentication (always present, toggled with CSS class)
         with gr.Row(elem_id="sidebar-row") as sidebar_row:
             with gr.Column(scale=1, elem_classes=["sidebar-container"], elem_id="auth-sidebar"):
-                with gr.Row(elem_classes=["sidebar-header"]):
-                    gr.Markdown("### 🔐 Authentication")
+                # Sidebar header: close button (left), Authentication (center), lock icon (right)
+                with gr.Row(elem_classes=["sidebar-header-bar"]):
+                    with gr.Column(scale=1, min_width=0):
+                        close_sidebar_btn = gr.Button("✖", size="sm", variant="secondary", elem_classes=["sidebar-close-btn"])
+                    with gr.Column(scale=6, min_width=0):
+                        gr.Markdown("<span class='sidebar-header-title'>Authentication</span>")
+                    with gr.Column(scale=1, min_width=0, elem_id="sidebar-lock-icon-col"):
+                        gr.Markdown("<span class='sidebar-header-lock'>🔒</span>")
                 with gr.Column(elem_classes=["sidebar-content"]):
                     with gr.Column(elem_classes=["auth-form"]):
                         gr.Markdown('> Click on Auth to securely authenticate before running a research query.')
@@ -180,6 +178,7 @@ def launch_ui():
             else:
                 return gr.update(elem_classes=["hidden"])
         auth_icon_button.click(fn=toggle_sidebar, outputs=sidebar_row)
+        close_sidebar_btn.click(fn=toggle_sidebar, outputs=sidebar_row)
 
         def is_admin_mode(email):
             return email.strip().startswith("RSUB_TOKEN:")
@@ -215,33 +214,41 @@ def launch_ui():
                 if not validate_email_format(email):
                     print("[DEBUG] Invalid email format branch (inline style)")
                     return (
-                        gr.update(value='<div style="color: #d32f2f;">❌ Invalid email address. Please enter a valid email in the format: user@example.com.</div>'),
+                        gr.update(value='<div style=\"color: #d32f2f;\">❌ Invalid email address. Please enter a valid email in the format: user@example.com.</div>'),
                         gr.update(interactive=False),  # run_button disabled
                         gr.update(interactive=True),
-                        gr.update(interactive=True)
+                        gr.update(interactive=True),
+                        gr.update(value=""),  # email_recipient cleared
+                        gr.update(value="")    # validation_message cleared
                     )
                 if not validate_token(email, token):
                     print("[DEBUG] Invalid token branch")
                     return (
-                        gr.update(value='<div style="color: #d32f2f;">❌ Invalid token. Please request a valid token.</div>'),
+                        gr.update(value='<div style=\"color: #d32f2f;\">❌ Invalid token. Please request a valid token.</div>'),
                         gr.update(interactive=False),  # run_button disabled
                         gr.update(interactive=True),
-                        gr.update(interactive=True)
+                        gr.update(interactive=True),
+                        gr.update(value=""),  # email_recipient cleared
+                        gr.update(value="")    # validation_message cleared
                     )
                 print("[DEBUG] Authenticated branch")
                 return (
-                    gr.update(value=f'<div class="status-indicator status-success">{STATUS_MESSAGES["authenticated"]}</div>'),
+                    gr.update(value=f'<div class=\"status-indicator status-success\">{STATUS_MESSAGES["authenticated"]}</div>'),
                     gr.update(interactive=True),      # run_button enabled
                     gr.update(interactive=False),     # email_input disabled
-                    gr.update(interactive=False)      # token_input disabled
+                    gr.update(interactive=False),     # token_input disabled
+                    gr.update(value=email),           # autofill email_recipient
+                    gr.update(value=f'<span style="color: #2e7d32; font-weight: 500; font-family: inherit; font-size: 1rem; margin-left: 48px; display: inline-block; vertical-align: middle;">{email} validated to run the research</span>')
                 )
             except Exception as e:
                 print(f"[DEBUG] Exception: {e}")
                 return (
-                    gr.update(value=f'<div style="color: #d32f2f;">❌ Unexpected error: {str(e)}</div>'),
+                    gr.update(value=f'<div style=\"color: #d32f2f;\">❌ Unexpected error: {str(e)}</div>'),
                     gr.update(interactive=False),
                     gr.update(interactive=True),
-                    gr.update(interactive=True)
+                    gr.update(interactive=True),
+                    gr.update(value=""),  # email_recipient cleared
+                    gr.update(value="")    # validation_message cleared
                 )
 
         def refresh_action():
@@ -249,7 +256,8 @@ def launch_ui():
                 gr.update(value=f'<div class="status-indicator status-awaiting">{STATUS_MESSAGES["awaiting"]}</div>'),
                 gr.update(interactive=False),     # run_button disabled
                 gr.update(interactive=True),      # email_input enabled
-                gr.update(interactive=True)       # token_input enabled
+                gr.update(interactive=True),       # token_input enabled
+                gr.update(value="")                 # validation_message cleared
             )
 
         async def run_with_token(query, email, token, status=gr.State()):
@@ -270,12 +278,16 @@ def launch_ui():
         # --- Connect events ---
         email_input.change(fn=update_request_button, inputs=email_input, outputs=request_token_button)
         request_token_button.click(fn=request_or_generate_token_action, inputs=[email_input, token_input], outputs=[status_label, request_token_button])
-        validate_button.click(fn=validate_token_action, inputs=[email_input, token_input], outputs=[status_label, run_button, email_input, token_input])
-        refresh_button.click(fn=refresh_action, inputs=None, outputs=[status_label, run_button, email_input, token_input])
+        validate_button.click(
+            fn=validate_token_action,
+            inputs=[email_input, token_input],
+            outputs=[status_label, run_button, email_input, token_input, email_recipient, validation_message]
+        )
+        refresh_button.click(fn=refresh_action, inputs=None, outputs=[status_label, run_button, email_input, token_input, validation_message])
         
         run_button.click(fn=run_with_token, inputs=[query_textbox, email_input, token_input], outputs=[status_label, report])
         query_textbox.submit(fn=run_with_token, inputs=[query_textbox, email_input, token_input], outputs=[status_label, report])
-        download_button.click(fn=download_report, outputs=download_file)
+        # download_button.click(fn=download_report, outputs=download_file)
         download_pdf_button.click(fn=download_report_as_pdf, outputs=download_pdf_file)
         download_docx_button.click(fn=download_report_as_docx, outputs=download_docx_file)
         send_email_button.click(fn=send_email_report, inputs=email_recipient, outputs=email_status)
