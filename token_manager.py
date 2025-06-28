@@ -16,47 +16,45 @@ def generate_token(length=16):
     """Generate a secure random token."""
     return secrets.token_hex(length)
 
+def load_tokens(filename=TOKEN_FILE):
+    if not os.path.exists(filename):
+        return {}
+    with open(filename, "rb") as f:
+        encrypted = f.read()
+    try:
+        decrypted = fernet.decrypt(encrypted)
+        return json.loads(decrypted.decode())
+    except Exception:
+        return {}
+
+def save_tokens(tokens, filename=TOKEN_FILE):
+    data = json.dumps(tokens).encode()
+    encrypted = fernet.encrypt(data)
+    with open(filename, "wb") as f:
+        f.write(encrypted)
+
 def save_token(email, token, filename=TOKEN_FILE):
-    tokens = {}
-    if os.path.exists(filename):
-        with open(filename, "r") as f:
-            tokens = json.load(f)
-    encrypted_token = fernet.encrypt(token.encode()).decode()
-    tokens[email] = {"token": encrypted_token, "count": 0}
-    with open(filename, "w") as f:
-        json.dump(tokens, f)
+    tokens = load_tokens(filename)
+    tokens[email] = {"token": token, "count": 0}
+    save_tokens(tokens, filename)
 
 def get_token(email, filename=TOKEN_FILE):
-    if not os.path.exists(filename):
-        return None
-    with open(filename, "r") as f:
-        tokens = json.load(f)
+    tokens = load_tokens(filename)
     entry = tokens.get(email)
     if not entry:
         return None
-    try:
-        return fernet.decrypt(entry["token"].encode()).decode()
-    except Exception:
-        return None
+    return entry["token"]
 
 def validate_token(email, token, filename=TOKEN_FILE):
-    if not os.path.exists(filename):
-        return False
-    with open(filename, "r") as f:
-        tokens = json.load(f)
+    tokens = load_tokens(filename)
     entry = tokens.get(email)
     if not entry:
         return False
-    try:
-        real_token = fernet.decrypt(entry["token"].encode()).decode()
-        if real_token == token and entry["count"] < RESEARCH_RUN_COUNT_TOKEN:
-            entry["count"] += 1
-            with open(filename, "w") as f:
-                json.dump(tokens, f)
-            return True
-        return False
-    except Exception:
-        return False
+    if entry["token"] == token and entry["count"] < RESEARCH_RUN_COUNT_TOKEN:
+        entry["count"] += 1
+        save_tokens(tokens, filename)
+        return True
+    return False
 
 if __name__ == "__main__":
     email = input("Enter email: ").strip()
