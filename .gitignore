@@ -55,6 +55,10 @@ logs/
 
 # Output files
 output/
+
+# Backup files
+backup/
+
 *.pdf
 *.docx
 *.md
@@ -82,4 +86,11 @@ htmlcov/
 
 # Gradio
 gradio_cached_examples/
-flagged/ 
+flagged/
+
+# Local environment and activation files
+Environment_Setup_Guide.txt
+activate_deep_research.bat
+activate_deep_research.ps1
+activate_env.bat
+activate_env.ps1 
