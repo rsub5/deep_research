@@ -5,9 +5,7 @@ from markdown_to_pdf import convert_markdown_to_pdf
 from markdown_to_docx import convert_markdown_to_docx
 from email_agent import send_email_with_markdown
 import agents
-print("Importing Agent from agents...")
 from agents import Agent
-print("Imported Agent:", Agent)
 
 # Constants and Configuration
 REPORT_PATH = pathlib.Path("research_report_20250618_193430.md")

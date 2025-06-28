@@ -68,6 +68,12 @@ def launch_ui():
                     elem_classes=["research-button"]
                 )
                 gr.HTML(f'<div style="color:#d32f2f;font-size:0.78rem;margin-top:0.25rem;">Due to computation cost, research can be performed only {RESEARCH_RUN_COUNT_TOKEN} time(s). You need to raise further request to run Research again.</div>')
+                # Add revalidation message area
+                revalidation_message = gr.HTML(
+                    value="",
+                    visible=False,
+                    elem_id="revalidation-message"
+                )
                 gr.HTML('</div>')
                 
                 # Report Display Section
@@ -197,7 +203,7 @@ def launch_ui():
                 if not token:
                     token = generate_token(16)
                 save_token(actual_email, token)
-                return gr.update(value=f'<div style="color: #2e7d32;">✅ Token generated and saved for {actual_email}.</div>'), gr.update()
+                return gr.update(value=f'<div style="color: #2e7d32;">✅ Token generated and saved for {actual_email}.<br><strong>Token:</strong> {token}</div>'), gr.update()
             else:
                 if not email:
                     return gr.update(value='<div style="color: #d32f2f;">❌ Please enter an email to request a token.</div>'), gr.update()
@@ -219,7 +225,8 @@ def launch_ui():
                         gr.update(interactive=True),
                         gr.update(interactive=True),
                         gr.update(value=""),  # email_recipient cleared
-                        gr.update(value="")    # validation_message cleared
+                        gr.update(value=""),    # validation_message cleared
+                        gr.update(visible=False)  # revalidation_message hidden
                     )
                 if not validate_token(email, token):
                     print("[DEBUG] Invalid token branch")
@@ -229,7 +236,8 @@ def launch_ui():
                         gr.update(interactive=True),
                         gr.update(interactive=True),
                         gr.update(value=""),  # email_recipient cleared
-                        gr.update(value="")    # validation_message cleared
+                        gr.update(value=""),    # validation_message cleared
+                        gr.update(visible=False)  # revalidation_message hidden
                     )
                 print("[DEBUG] Authenticated branch")
                 return (
@@ -238,7 +246,8 @@ def launch_ui():
                     gr.update(interactive=False),     # email_input disabled
                     gr.update(interactive=False),     # token_input disabled
                     gr.update(value=email),           # autofill email_recipient
-                    gr.update(value=f'<span style="color: #2e7d32; font-weight: 500; font-family: inherit; font-size: 1rem; margin-left: 48px; display: inline-block; vertical-align: middle;">{email} validated to run the research</span>')
+                    gr.update(value=f'<span style="color: #2e7d32; font-weight: 500; font-family: inherit; font-size: 1rem; margin-left: 48px; display: inline-block; vertical-align: middle;">{email} validated to run the research</span>'),
+                    gr.update(visible=False)  # revalidation_message hidden
                 )
             except Exception as e:
                 print(f"[DEBUG] Exception: {e}")
@@ -248,7 +257,8 @@ def launch_ui():
                     gr.update(interactive=True),
                     gr.update(interactive=True),
                     gr.update(value=""),  # email_recipient cleared
-                    gr.update(value="")    # validation_message cleared
+                    gr.update(value=""),    # validation_message cleared
+                    gr.update(visible=False)  # revalidation_message hidden
                 )
 
         def refresh_action():
@@ -257,23 +267,51 @@ def launch_ui():
                 gr.update(interactive=False),     # run_button disabled
                 gr.update(interactive=True),      # email_input enabled
                 gr.update(interactive=True),       # token_input enabled
-                gr.update(value="")                 # validation_message cleared
+                gr.update(value=""),                 # validation_message cleared
+                gr.update(visible=False)             # revalidation_message hidden
             )
 
         async def run_with_token(query, email, token, status=gr.State()):
             if not validate_token(email, token):
-                yield gr.update(value=f'<div class="status-indicator status-error">{STATUS_MESSAGES["invalid_token"]}</div>'), "*Please authenticate first to run research.*"
+                yield (
+                    gr.update(value=f'<div class="status-indicator status-error">{STATUS_MESSAGES["invalid_token"]}</div>'), 
+                    "*Please authenticate first to run research.*",
+                    gr.update(interactive=False),  # Disable run button
+                    gr.update(visible=True, value='<div style="color: #d32f2f; font-size: 0.9rem; margin-top: 0.5rem; padding: 0.5rem; background-color: #ffebee; border-radius: 4px; border-left: 4px solid #d32f2f;"><strong>⚠️ Research Blocked:</strong> Please validate your token again to run further research.</div>')
+                )
                 return
             
-            yield gr.update(value=f'<div class="status-indicator status-processing">{STATUS_MESSAGES["searching"]}</div>'), "*Starting research...*"
+            # Disable the run button immediately after first click
+            yield (
+                gr.update(value=f'<div class="status-indicator status-processing">{STATUS_MESSAGES["searching"]}</div>'), 
+                "*Starting research...*",
+                gr.update(interactive=False),  # Disable run button
+                gr.update(visible=False)       # Hide revalidation message
+            )
             
             async for chunk in run(query):
                 if chunk.strip().lower().startswith("thinking"):
-                    yield gr.update(value=f'<div class="status-indicator status-processing">{STATUS_MESSAGES["thinking"]}</div>'), chunk
+                    yield (
+                        gr.update(value=f'<div class="status-indicator status-processing">{STATUS_MESSAGES["thinking"]}</div>'), 
+                        chunk,
+                        gr.update(interactive=False),  # Keep button disabled
+                        gr.update(visible=False)
+                    )
                 elif chunk.strip().lower().startswith("writing"):
-                    yield gr.update(value=f'<div class="status-indicator status-processing">{STATUS_MESSAGES["writing"]}</div>'), chunk
+                    yield (
+                        gr.update(value=f'<div class="status-indicator status-processing">{STATUS_MESSAGES["writing"]}</div>'), 
+                        chunk,
+                        gr.update(interactive=False),  # Keep button disabled
+                        gr.update(visible=False)
+                    )
                 else:
-                    yield gr.update(value=f'<div class="status-indicator status-success">{STATUS_MESSAGES["completed"]}</div>'), chunk
+                    # Research completed - show revalidation message
+                    yield (
+                        gr.update(value=f'<div class="status-indicator status-success">{STATUS_MESSAGES["completed"]}</div>'), 
+                        chunk,
+                        gr.update(interactive=False),  # Keep button disabled
+                        gr.update(visible=True, value='<div style="color: #1976d2; font-size: 0.9rem; margin-top: 0.5rem; padding: 0.5rem; background-color: #e3f2fd; border-radius: 4px; border-left: 4px solid #1976d2;"><strong>✅ Research triggered successfully!</strong> Please validate your token again to run further research.</div>')
+                    )
 
         # --- Connect events ---
         email_input.change(fn=update_request_button, inputs=email_input, outputs=request_token_button)
@@ -281,12 +319,20 @@ def launch_ui():
         validate_button.click(
             fn=validate_token_action,
             inputs=[email_input, token_input],
-            outputs=[status_label, run_button, email_input, token_input, email_recipient, validation_message]
+            outputs=[status_label, run_button, email_input, token_input, email_recipient, validation_message, revalidation_message]
         )
-        refresh_button.click(fn=refresh_action, inputs=None, outputs=[status_label, run_button, email_input, token_input, validation_message])
+        refresh_button.click(fn=refresh_action, inputs=None, outputs=[status_label, run_button, email_input, token_input, validation_message, revalidation_message])
         
-        run_button.click(fn=run_with_token, inputs=[query_textbox, email_input, token_input], outputs=[status_label, report])
-        query_textbox.submit(fn=run_with_token, inputs=[query_textbox, email_input, token_input], outputs=[status_label, report])
+        run_button.click(
+            fn=run_with_token, 
+            inputs=[query_textbox, email_input, token_input], 
+            outputs=[status_label, report, run_button, revalidation_message]
+        )
+        query_textbox.submit(
+            fn=run_with_token, 
+            inputs=[query_textbox, email_input, token_input], 
+            outputs=[status_label, report, run_button, revalidation_message]
+        )
         # download_button.click(fn=download_report, outputs=download_file)
         download_pdf_button.click(fn=download_report_as_pdf, outputs=download_pdf_file)
         download_docx_button.click(fn=download_report_as_docx, outputs=download_docx_file)
