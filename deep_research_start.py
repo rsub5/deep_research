@@ -228,7 +228,8 @@ def launch_ui():
                         gr.update(interactive=True),
                         gr.update(value=""),  # email_recipient cleared
                         gr.update(value=""),    # validation_message cleared
-                        gr.update(visible=False)  # revalidation_message hidden
+                        gr.update(visible=False),  # revalidation_message hidden
+                        gr.update()  # sidebar_row unchanged
                     )
                 if not validate_token(email, token):
                     print("[DEBUG] Invalid token branch")
@@ -239,7 +240,8 @@ def launch_ui():
                         gr.update(interactive=True),
                         gr.update(value=""),  # email_recipient cleared
                         gr.update(value=""),    # validation_message cleared
-                        gr.update(visible=False)  # revalidation_message hidden
+                        gr.update(visible=False),  # revalidation_message hidden
+                        gr.update()  # sidebar_row unchanged
                     )
                 print("[DEBUG] Authenticated branch")
                 return (
@@ -249,7 +251,8 @@ def launch_ui():
                     gr.update(interactive=False),     # token_input disabled
                     gr.update(value=email),           # autofill email_recipient
                     gr.update(value=f'<span style="color: #2e7d32; font-weight: 500; font-family: inherit; font-size: 1rem; margin-left: 48px; display: inline-block; vertical-align: middle;">{email} validated to run the research</span>'),
-                    gr.update(visible=False)  # revalidation_message hidden
+                    gr.update(visible=False),  # revalidation_message hidden
+                    gr.update(elem_classes=["hidden"])  # Hide sidebar_row
                 )
             except Exception as e:
                 print(f"[DEBUG] Exception: {e}")
@@ -260,7 +263,8 @@ def launch_ui():
                     gr.update(interactive=True),
                     gr.update(value=""),  # email_recipient cleared
                     gr.update(value=""),    # validation_message cleared
-                    gr.update(visible=False)  # revalidation_message hidden
+                    gr.update(visible=False),  # revalidation_message hidden
+                    gr.update()  # sidebar_row unchanged
                 )
 
         def refresh_action():
@@ -321,7 +325,7 @@ def launch_ui():
         validate_button.click(
             fn=validate_token_action,
             inputs=[email_input, token_input],
-            outputs=[status_label, run_button, email_input, token_input, email_recipient, validation_message, revalidation_message]
+            outputs=[status_label, run_button, email_input, token_input, email_recipient, validation_message, revalidation_message, sidebar_row]
         )
         refresh_button.click(fn=refresh_action, inputs=None, outputs=[status_label, run_button, email_input, token_input, validation_message, revalidation_message])
         
