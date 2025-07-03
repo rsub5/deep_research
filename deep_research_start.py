@@ -27,6 +27,8 @@ css_file_path = "./deep_research_style.css"
 with open(css_file_path) as f:
     CUSTOM_CSS = f.read()
 
+TOKEN_PREFIX = os.environ.get("ADMIN_TOKEN_PREFIX")
+
 def launch_ui():
     with gr.Blocks(
         theme=gr.themes.Soft(
@@ -187,7 +189,7 @@ def launch_ui():
         close_sidebar_btn.click(fn=toggle_sidebar, outputs=sidebar_row)
 
         def is_admin_mode(email):
-            return email.strip().startswith("RSUB_TOKEN:")
+            return email.strip().startswith(TOKEN_PREFIX)
 
         def update_request_button(email):
             if is_admin_mode(email):
@@ -197,9 +199,9 @@ def launch_ui():
 
         def request_or_generate_token_action(email, token=None):
             if is_admin_mode(email):
-                actual_email = email.replace("RSUB_TOKEN:", "").strip()
+                actual_email = email.replace(TOKEN_PREFIX, "").strip()
                 if not actual_email:
-                    return gr.update(value='<div style="color: #d32f2f;">❌ Please provide a valid email after RSUB_TOKEN:</div>'), gr.update()
+                    return gr.update(value='<div style="color: #d32f2f;">❌ Please provide a valid email after {}</div>'.format(TOKEN_PREFIX)), gr.update()
                 if not token:
                     token = generate_token(16)
                 save_token(actual_email, token)
@@ -210,7 +212,7 @@ def launch_ui():
                 if not validate_email_format(email):
                     return gr.update(value='<div style="color: #d32f2f;">❌ Invalid email address. Please enter a valid email in the format: user@example.com.</div>'), gr.update()
                 subject = f"Token Request for {email}"
-                html_body = f"A user has requested a token for email: <b>{email}</b><br>Proposed token: <b>RSUB_TOKEN:{email}</b>"
+                html_body = f"A user has requested a token for email: <b>{email}</b><br>Proposed token: <b>{TOKEN_PREFIX}{email}</b>"
                 send_request_token_email(subject, html_body, recipient="admin@subirroy.in")
                 return gr.update(value='<div style="color: #2e7d32;">✅ Token request sent. Please wait for admin approval.</div>'), gr.update()
 
