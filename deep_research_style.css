@@ -349,22 +349,4 @@ button.sidebar-close-btn {
 .left-align-row {
     justify-content: flex-start !important;
     align-items: center !important;
-}
-
-.research-limit-message {
-    margin-bottom: 0.5rem !important;
-}
-
-/* Hide the research query textbox and reduce gap when limit is reached */
-.research-limit-active .gr-textbox,
-.research-limit-active .gr-row:has(.research-query-heading),
-.research-limit-active .gr-row:has(.gr-textbox) {
-    display: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    height: 0 !important;
-}
-
-.research-limit-active .output-section {
-    margin-top: 0.5rem !important;
 } 

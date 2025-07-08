@@ -42,7 +42,7 @@ with open('test_report.md', 'w', encoding='utf-8') as f:
 from markdown_to_docx import convert_markdown_to_docx
 
 # Read the test markdown file
-with open('2_openai/deep_research/research_report_20250618_193430.md', 'r', encoding='utf-8') as f:
+with open('test_report.md', 'r', encoding='utf-8') as f:
     markdown_content = f.read()
 
 print("Converting test markdown to DOCX...")

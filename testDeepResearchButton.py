@@ -8,7 +8,7 @@ import agents
 from agents import Agent
 
 # Constants and Configuration
-REPORT_PATH = pathlib.Path("research_report_20250618_193430.md")
+REPORT_PATH = pathlib.Path("research_report.md")
 DEFAULT_REPORT_CONTENT = "Report file not found."
 TEST_REPORT_FILENAME = "test_report.md"
 
