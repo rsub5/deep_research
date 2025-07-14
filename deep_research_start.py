@@ -20,6 +20,7 @@ from deep_research import (
 )
 from email_agent import send_request_token_email
 from token_manager import RESEARCH_RUN_COUNT_TOKEN
+from research_logger import log_authenticated_session
 
 # Use relative path with deep_research folder as main
 css_file_path = "./deep_research_style.css"
@@ -220,6 +221,12 @@ def launch_ui():
             try:
                 print(f"[DEBUG] validate_token_action called with email={email}, token={token}")
                 if not validate_email_format(email):
+                    # Log failed authentication - invalid email format
+                    log_authenticated_session(
+                        email=email,
+                        report_name="Authentication",
+                        button_clicked="validate_token_failed_invalid_email"
+                    )
                     print("[DEBUG] Invalid email format branch (inline style)")
                     return (
                         gr.update(value='<div style=\"color: #d32f2f;\">❌ Invalid email address. Please enter a valid email in the format: user@example.com.</div>'),
@@ -232,6 +239,12 @@ def launch_ui():
                         gr.update()  # sidebar_row unchanged
                     )
                 if not validate_token(email, token):
+                    # Log failed authentication - invalid token
+                    log_authenticated_session(
+                        email=email,
+                        report_name="Authentication",
+                        button_clicked="validate_token_failed_invalid_token"
+                    )
                     print("[DEBUG] Invalid token branch")
                     return (
                         gr.update(value='<div style=\"color: #d32f2f;\">❌ Invalid token. Please request a valid token.</div>'),
@@ -243,6 +256,12 @@ def launch_ui():
                         gr.update(visible=False),  # revalidation_message hidden
                         gr.update()  # sidebar_row unchanged
                     )
+                # Log successful authentication
+                log_authenticated_session(
+                    email=email,
+                    report_name="Authentication",
+                    button_clicked="validate_token_success"
+                )
                 print("[DEBUG] Authenticated branch")
                 return (
                     gr.update(value=f'<div class=\"status-indicator status-success\">{STATUS_MESSAGES["authenticated"]}</div>'),
@@ -255,6 +274,12 @@ def launch_ui():
                     gr.update(elem_classes=["hidden"])  # Hide sidebar_row
                 )
             except Exception as e:
+                # Log authentication error
+                log_authenticated_session(
+                    email=email,
+                    report_name="Authentication",
+                    button_clicked="validate_token_error"
+                )
                 print(f"[DEBUG] Exception: {e}")
                 return (
                     gr.update(value=f'<div style=\"color: #d32f2f;\">❌ Unexpected error: {str(e)}</div>'),
@@ -278,7 +303,29 @@ def launch_ui():
             )
 
         async def run_with_token(query, email, token, status=gr.State()):
+            # Check if query is empty or only whitespace
+            if not query or not query.strip():
+                # Log failed research attempt - empty query
+                log_authenticated_session(
+                    email=email,
+                    report_name="Empty Query",
+                    button_clicked="start_research_failed_empty_query"
+                )
+                yield (
+                    gr.update(value=f'<div class="status-indicator status-error">❌ Please enter a research topic or question.</div>'), 
+                    "*Please enter a research topic to continue.*",
+                    gr.update(interactive=True),  # Keep button enabled
+                    gr.update(visible=False)       # Hide revalidation message
+                )
+                return
+            
             if not validate_token(email, token):
+                # Log failed research attempt - invalid token
+                log_authenticated_session(
+                    email=email,
+                    report_name=query[:50] + "..." if len(query) > 50 else query,
+                    button_clicked="start_research_failed_invalid_token"
+                )
                 yield (
                     gr.update(value=f'<div class="status-indicator status-error">{STATUS_MESSAGES["invalid_token"]}</div>'), 
                     "*Please authenticate first to run research.*",
@@ -286,6 +333,13 @@ def launch_ui():
                     gr.update(visible=True, value='<div style="color: #d32f2f; font-size: 0.9rem; margin-top: 0.5rem; padding: 0.5rem; background-color: #ffebee; border-radius: 4px; border-left: 4px solid #d32f2f;"><strong>⚠️ Research Blocked:</strong> Please validate your token again to run further research.</div>')
                 )
                 return
+            
+            # Log research start
+            log_authenticated_session(
+                email=email,
+                report_name=query[:50] + "..." if len(query) > 50 else query,
+                button_clicked="start_research"
+            )
             
             # Disable the run button immediately after first click
             yield (
@@ -311,6 +365,12 @@ def launch_ui():
                         gr.update(visible=False)
                     )
                 else:
+                    # Research completed - log completion
+                    log_authenticated_session(
+                        email=email,
+                        report_name=query[:50] + "..." if len(query) > 50 else query,
+                        button_clicked="research_completed"
+                    )
                     # Research completed - show revalidation message
                     yield (
                         gr.update(value=f'<div class="status-indicator status-success">{STATUS_MESSAGES["completed"]}</div>'), 
@@ -318,6 +378,14 @@ def launch_ui():
                         gr.update(interactive=False),  # Keep button disabled
                         gr.update(visible=True, value='<div style="color: #1976d2; font-size: 0.9rem; margin-top: 0.5rem; padding: 0.5rem; background-color: #e3f2fd; border-radius: 4px; border-left: 4px solid #1976d2;"><strong>✅ Research triggered successfully!</strong> Please validate your token again to run further research.</div>')
                     )
+
+
+
+
+
+
+
+
 
         # --- Connect events ---
         email_input.change(fn=update_request_button, inputs=email_input, outputs=request_token_button)

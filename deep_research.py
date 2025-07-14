@@ -291,6 +291,8 @@ async def send_email_report(email):
         print(DEBUG_MESSAGES["no_report"])
         return create_status_html(EMAIL_MESSAGES["no_report"])
     
+    from research_logger import log_authenticated_session; log_authenticated_session(email=email, report_name=latest_report.split('\n')[0][:50] + "..." if len(latest_report.split('\n')[0]) > 50 else latest_report.split('\n')[0], button_clicked="send_email")
+    
     if not email:
         print(DEBUG_MESSAGES["no_email"])
         return create_status_html(EMAIL_MESSAGES["no_email"])
